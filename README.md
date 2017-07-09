@@ -1,2 +1,2 @@
 # goplaysmile
-Go Play Smile written in GopherJS
+Go Play Smile written using GopherJS
