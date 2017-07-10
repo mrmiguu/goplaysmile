@@ -1,2 +1,2 @@
 # goplaysmile
-Go Play Smile & GopherJS
+An online game powered by Goop
