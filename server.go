@@ -28,7 +28,7 @@ func connected(w http.ResponseWriter, r *http.Request) {
 	defer c.Close()
 
 	for {
-		mt, message, err := c.ReadMessage()
+		msgtype, message, err := c.ReadMessage()
 		if err != nil {
 			log.Println("read:", err)
 			break
@@ -36,7 +36,7 @@ func connected(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("recv: %s", message)
 
-		err = c.WriteMessage(mt, message)
+		err = c.WriteMessage(msgtype, message)
 		if err != nil {
 			log.Println("write:", err)
 			break
