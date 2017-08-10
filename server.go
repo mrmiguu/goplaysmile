@@ -17,10 +17,10 @@ func main() {
 	}
 }
 
-var upgrader = websocket.Upgrader{} // use default options
+var up = websocket.Upgrader{} // use default options
 
 func connected(w http.ResponseWriter, r *http.Request) {
-	c, err := upgrader.Upgrade(w, r, nil)
+	c, err := up.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
 		return

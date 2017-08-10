@@ -2,55 +2,50 @@ package main
 
 import (
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/mrmiguu/Golfer"
 )
 
 const (
 	width, height = 450, 800
-	host, port    = "47.148.133.120", "4200"
+	host, port    = "localhost", "4200"
 )
 
 var (
+	alert             func(interface{})
 	document          *js.Object
 	documentBody      *js.Object
 	documentBodyStyle *js.Object
-	alert             func(interface{})
+	window            *js.Object
 
-	phaser   *js.Object
-	game     *js.Object
-	gameLoad *js.Object
+	phaser    *js.Object
+	game      *js.Object
+	gameLoad  *js.Object
+	gameAdd   *js.Object
+	gameWorld *js.Object
 
 	loading *js.Object
-	loaded  bool
 	// ws                *js.Object
 	// t                 *js.Object
 	// button            *js.Object
 )
 
 func main() {
-	loadDOM()
-	loadPhaser()
-}
-
-func loadDOM() {
+	alert = func(x interface{}) { js.Global.Call("alert", x) }
 	document = js.Global.Get("document")
 	documentBody = document.Get("body")
 	documentBodyStyle = documentBody.Get("style")
-	alert = func(x interface{}) { js.Global.Call("alert", x) }
+	window = js.Global.Get("window")
 
 	documentBodyStyle.Set("background", "#000000")
 	documentBodyStyle.Set("margin", 0)
-}
 
-func loadPhaser() {
-	script := document.Call("createElement", "script")
-	script.Set("src", "phaser.min.js")
-	script.Set("onload", onPhaserLoad)
-	documentBody.Call("appendChild", script)
-}
-
-func onPhaserLoad() {
+	<-golfer.Lib("lib/phaser.min.js")
 	phaser = js.Global.Get("Phaser")
+	// iW := window.Get("innerWidth").Float()
+	// iH := window.Get("innerHeight").Float()
+	// devPx := window.Get("devicePixelRatio").Float()
 	game = phaser.Get("Game").New(width, height, phaser.Get("AUTO"), "phaser-example", js.M{"preload": preload, "create": create})
+
 }
 
 func preload() {
@@ -63,31 +58,36 @@ func preload() {
 	scale.Set("pageAlignVertically", true)
 
 	gameLoad = game.Get("load")
-	gameLoad.Call("spritesheet", "loading", "assets/loading.png", width, height)
-	gameLoad.Get("onLoadComplete").Call("add", func() { loaded = true })
+	gameLoad.Call("spritesheet", "loading", "res/loading.png", width, height)
 }
 
 func create() {
-	add := game.Get("add")
+	gameAdd = game.Get("add")
+	gameWorld = game.Get("world")
 
-	loading = add.Call("sprite", 0, 0, "loading")
+	loading = newSprite("loading")
 	loading.Set("alpha", 0)
-	fadeIn := add.Call("tween", loading).Call("to", js.M{"alpha": 1}, 1333)
-	fadeIn.Set("frameBased", true)
+	fadeIn := newTween(loading, js.M{"alpha": 1}, 1333)
 	fadeIn.Call("start")
 
-	taptostart := "assets/taptostart.png"
+	taptostart := "res/taptostart.png"
+
+	onLoad, loaded := golfer.Callback()
+	gameLoad.Get("onLoadComplete").Call("add", onLoad)
 
 	spin := loading.Get("animations").Call("add", "spin")
 	spin.Call("play", 9, true)
 	spin.Get("onLoop").Call("add", func() {
-		if !loaded {
+		select {
+		case <-loaded:
+		default:
 			return
 		}
+
 		spin.Call("stop")
 		loading.Set("visible", false)
 
-		goBtn, goHit := newBtn(taptostart, 0, 0)
+		goBtn, goHit := newButton(taptostart)
 		go func() {
 			<-goHit
 			goBtn.Set("visible", false)
@@ -99,14 +99,14 @@ func create() {
 
 	gameLoad.Call("start")
 
-	// button = add.Call("button", game.Get("world").Get("centerX"), game.Get("world").Get("centerY"), "button", func() {
+	// button = gameAdd.Call("button", game.Get("world").Get("centerX"), game.Get("world").Get("centerY"), "button", func() {
 	// 	ws.Call("send", "Hello!")
 	// }, nil, 1, 0, 2)
 	// button.Get("anchor").Call("setTo", 0.5, 0.5)
 
 	// var text = "- phaser -\n with a sprinkle of \n pixi dust."
 	// var style = js.M{"font": "65px Arial", "fill": "#ff0044", "align": "center"}
-	// t = add.Call("text", 0, 0, text, style)
+	// t = gameAdd.Call("text", 0, 0, text, style)
 
 	// ws = js.Global.Get("WebSocket").New("ws://" + host + ":" + port + "/connected")
 	// ws.Set("onopen", onConnectionOpen)
@@ -115,9 +115,23 @@ func create() {
 	// ws.Set("onerror", onConnectionError)
 }
 
-func newBtn(url string, x, y int) (*js.Object, <-chan bool) {
+func newTween(o *js.Object, params js.M, ms int) *js.Object {
+	twn := gameAdd.Call("tween", o).Call("to", params, ms)
+	twn.Set("frameBased", true)
+	return twn
+}
+
+func newSprite(id string) *js.Object {
+	spr := gameAdd.Call("sprite", gameWorld.Get("centerX"), gameWorld.Get("centerY"), id)
+	spr.Get("anchor").Call("setTo", 0.5, 0.5)
+	return spr
+}
+
+func newButton(url string) (*js.Object, <-chan bool) {
+	x, y := gameWorld.Get("centerX").Int(), gameWorld.Get("centerY").Int()
 	hit := make(chan bool)
 	btn := game.Get("add").Call("button", x, y, url, func() { hit <- true }, nil, 0, 0, 1, 0)
+	btn.Get("anchor").Call("setTo", 0.5, 0.5)
 	btn.Get("onInputDown").Call("add", func() { btn.Set("y", y+min(height-btn.Get("height").Int(), 3)) })
 	btn.Get("onInputOver").Call("add", func() { btn.Set("y", y) })
 	btn.Get("onInputOut").Call("add", func() { btn.Set("y", y) })
