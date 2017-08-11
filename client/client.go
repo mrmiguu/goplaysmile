@@ -39,7 +39,10 @@ func main() {
 	documentBodyStyle.Set("background", "#000000")
 	documentBodyStyle.Set("margin", 0)
 
+	// load libraries
+	<-golfer.Lib("https://unpkg.com/notie")
 	<-golfer.Lib("lib/phaser.min.js")
+
 	phaser = js.Global.Get("Phaser")
 	// iW := window.Get("innerWidth").Float()
 	// iH := window.Get("innerHeight").Float()
@@ -80,19 +83,26 @@ func create() {
 	spin.Get("onLoop").Call("add", func() {
 		select {
 		case <-loaded:
+			spin.Call("stop")
+			loading.Set("visible", false)
+
+			goBtn, goHit := newButton(taptostart)
+			go func() {
+				<-goHit
+				goBtn.Set("visible", false)
+				// msg := js.Global.Call("prompt", "Username")
+				// alert(msg)
+
+				field := document.Call("getElementById", "field")
+				field.Call("focus")
+				field.Call("click")
+
+				// js.Global.Get("notie").Call("input", js.M{"text": "Username"})
+				start()
+			}()
 		default:
 			return
 		}
-
-		spin.Call("stop")
-		loading.Set("visible", false)
-
-		goBtn, goHit := newButton(taptostart)
-		go func() {
-			<-goHit
-			goBtn.Set("visible", false)
-			start()
-		}()
 	})
 
 	gameLoad.Call("spritesheet", taptostart, taptostart, width, height)
