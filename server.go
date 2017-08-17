@@ -11,7 +11,7 @@ func main() {
 	http.Handle("/", http.FileServer(http.Dir("client")))
 	http.HandleFunc("/connected", connected)
 
-	err := http.ListenAndServe(":4200", nil)
+	err := http.ListenAndServe(":6969", nil)
 	if err != nil {
 		panic(err)
 	}
