@@ -17,12 +17,14 @@ func main() {
 	}
 }
 
-var up = websocket.Upgrader{} // use default options
+var up = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
 
 func connected(w http.ResponseWriter, r *http.Request) {
 	c, err := up.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("upgrade:", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer c.Close()
@@ -30,7 +32,7 @@ func connected(w http.ResponseWriter, r *http.Request) {
 	for {
 		msgtype, message, err := c.ReadMessage()
 		if err != nil {
-			log.Println("read:", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			break
 		}
 
@@ -38,8 +40,8 @@ func connected(w http.ResponseWriter, r *http.Request) {
 
 		err = c.WriteMessage(msgtype, message)
 		if err != nil {
-			log.Println("write:", err)
-			break
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 	}
 }
